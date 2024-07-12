@@ -1,47 +1,74 @@
-// set Motor A to Arduino Pins
-int motor_A = 12; // official Arduino Motor Shield uses D12
-int motor_B = 13; // official Arduino Motor Shield uses D13
+#include <AFMotor.h>
+#include <NewPing.h>
 
-// set the Motor Speed using the Arduino Pins
-int motor_A_speed = 10; // official Arduino Motor Shield uses D3
-int motor_B_speed = 11; // official Arduino Motor Shield uses D11
+// Create an instance of the motor shield library
+AF_DCMotor motorLeft(3);   // M3 port on the motor shield
+AF_DCMotor motorRight(4);  // M4 port on the motor shield
 
-// set the time between motor on and motor off
-int wait_in_milliseconds = 1000;
+//define pins for ultrasonic sensor
+#define TRIGGER_PIN 12
+#define ECHO_PIN 11
+#define MAX_DISTANCE 200 //200cm
+#define LED_PIN 8
 
-// this code runs once at the start
+NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE); //creates the ping object
 void setup() {
+  // Set up serial communication
+  Serial.begin(9600);
+  
+  // Motor speed range is from 0 (off) to 255 (full speed)
+  motorLeft.setSpeed(100);  // Set the speed for the left motor
+  motorRight.setSpeed(100); // Set the speed for the right motor
 
-  // set the Arduino pin to OUTPUT mode
-  pinMode(motor_A, OUTPUT);
-  pinMode(motor_B, OUTPUT);
+  //LED as output
+  pinMode(LED_PIN, OUTPUT); 
 }
 
-// move forward
-void forward() {
+void loop() {
 
-  // set the direction to forward
-  digitalWrite(motor_A, LOW);  
-  digitalWrite(motor_B, HIGH);
+  //measure distance
+  unsigned int distance = sonar.ping_cm();
 
-  // set to full speed
-  analogWrite(motor_A_speed, 255);
-  analogWrite(motor_B_speed, 255);
+  //print info from sonar sensor
+  Serial.print("Distance: ");
+  Serial.print(distance);
+  Serial.println(" cm");
 
-  // wait
-  delay(wait_in_milliseconds);
+  
 
-  // stop
-  analogWrite(motor_A_speed, 0);
-  analogWrite(motor_B_speed, 0);
+  //if distance is less than 10cm, turn!
+  if (distance > 0 && distance <=10) {
+    //light up LED
+    digitalWrite(LED_PIN, HIGH); 
+
+    motorLeft.run(RELEASE);
+    motorRight.run(RELEASE);
+    //pause command
+    delay(1000);
+
+    //turn robot (rotate 1 wheel backswards and 1 forward)
+    motorLeft.run(BACKWARD);
+    motorRight.run(FORWARD);
+
+    delay(1000);
+  
+  //stop both motors
+  motorLeft.run(RELEASE);
+  motorRight.run(RELEASE);
+  delay(500);
+
+  }
+  else {
+    //turn off LED
+    digitalWrite(LED_PIN, LOW); 
+  // Run both motors forward
+  motorLeft.run(FORWARD);
+  motorRight.run(FORWARD);
+  }
 }
 
-// the main program loop
-void loop(){
-
-  // move forward
-  forward();
-
-  // wait 2 seconds
-  delay(2000);
-}
+//simple movement using the adafruit extension and solved the issue of using m3 and m4 port. 
+//you can now move both the motors and what you need to do next is add a way to have the robot
+// move forward, backwards...
+// Robot now can detect distance and when too close (10cm) it will turn around and continue until it confronts another object
+// basically just added a turn function and sonar detection
